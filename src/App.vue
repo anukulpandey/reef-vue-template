@@ -5,6 +5,7 @@
     <button @click="flip">Flip</button>
   </div>
   <button v-else @click="initializeDapp">Connect Wallet</button>
+  <p>{{ error }}</p>
 </template>
 
 <script>
@@ -40,6 +41,9 @@ export default {
       const provider = new Provider({
         provider: new WsProvider("ws://rpc-testnet.reefscan.info/ws"),
       });
+      provider.api.on("disconnected", () => {
+        console.log("disconnected");
+      });
       if (provider) {
         await provider.api.isReady;
         this.provider = provider;
@@ -54,6 +58,9 @@ export default {
       if (this.accounts.length > 0) {
         this.isWalletConnected = true;
         this.selectedAccount = this.accounts[0];
+        if (this.provider) {
+          this.getSigner();
+        }
       }
     },
     async getReefAccounts() {
@@ -82,9 +89,15 @@ export default {
       );
     },
     async flip() {
-      this.getSigner();
-      if (this.signer) {
-        await this.contract.flip();
+      try {
+        this.getSigner();
+        if (this.signer) {
+          await this.contract.flip();
+        }
+      } catch (error) {
+        if (error.message == "_canceled") {
+          this.error = "You cancelled the transaction";
+        }
       }
     },
   },
