@@ -14,6 +14,7 @@ import {
 } from "@polkadot/extension-dapp";
 import { WsProvider } from "@polkadot/api";
 import { Provider, Signer } from "@reef-defi/evm-provider";
+import { network } from "../dapp.config";
 
 export default {
   name: "App",
@@ -53,7 +54,7 @@ export default {
         return;
       }
       const ReefProvider = new Provider({
-        provider: new WsProvider("wss://rpc-testnet.reefscan.info/ws"),
+        provider: new WsProvider(network.wsUrlMainnet),
       });
       return ReefProvider;
     },
