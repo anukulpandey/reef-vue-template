@@ -4,7 +4,7 @@
     <button @click="getFlipperState">Get flipper value</button>
     <button @click="flip">Flip</button>
   </div>
-  <button v-else @click="initializeDapp">Connect Wallet</button>
+  <button v-else @click="init">Connect Wallet</button>
   <p>{{ error }}</p>
 </template>
 
@@ -37,35 +37,47 @@ export default {
     };
   },
   async created() {
-    try {
-      const provider = new Provider({
-        provider: new WsProvider("ws://rpc-testnet.reefscan.info/ws"),
-      });
-      provider.api.on("disconnected", () => {
-        console.log("disconnected");
-      });
-      if (provider) {
-        await provider.api.isReady;
-        this.provider = provider;
-      }
-    } catch (error) {
-      console.log(error);
-    }
+    await this.init();
   },
   methods: {
-    async initializeDapp() {
-      await this.getReefAccounts();
+    async init() {
+      await web3Enable("reef");
+      this.accounts = await web3Accounts();
       if (this.accounts.length > 0) {
         this.isWalletConnected = true;
         this.selectedAccount = this.accounts[0];
+        try {
+          const provider = new Provider({
+            provider: new WsProvider("wss://rpc-testnet.reefscan.info/ws"),
+          });
+          await provider.api.isReadyOrError;
+          provider.api.on("disconnected", () => {
+            console.log("disconnected");
+          });
+          if (provider) {
+            await provider.api.isReady;
+            this.provider = provider;
+          }
+        } catch (error) {
+          console.log(error);
+        }
         if (this.provider) {
-          this.getSigner();
+          await web3FromAddress(this.selectedAccount.address).then(
+            async (injector) => {
+              this.signer = new Signer(
+                this.provider,
+                this.selectedAccount.address,
+                injector.signer
+              );
+              this.contract = new ethers.Contract(
+                contractAddress,
+                abi,
+                this.signer
+              );
+            }
+          );
         }
       }
-    },
-    async getReefAccounts() {
-      await web3Enable("reef");
-      this.accounts = await web3Accounts();
     },
     async getFlipperState() {
       this.contract = new ethers.Contract(contractAddress, abi, this.provider);
