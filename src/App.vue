@@ -1,6 +1,6 @@
 <template>
   <div v-if="isWalletConnected && selectedAccount">
-    <div>Selected Address {{ selectedAccount.address }}</div>
+    <div>Selected Address {{ selectedAccount }}</div>
     <button @click="getFlipperState">Get flipper value</button>
     <button @click="flip">Flip</button>
   </div>
@@ -36,11 +36,17 @@ export default {
     };
   },
   async created() {
-    const provider = new Provider({
-      provider: new WsProvider("ws://rpc-testnet.reefscan.info/ws"),
-    });
-    await provider.api.isReady;
-    this.provider = provider;
+    try {
+      const provider = new Provider({
+        provider: new WsProvider("ws://rpc-testnet.reefscan.info/ws"),
+      });
+      if (provider) {
+        await provider.api.isReady;
+        this.provider = provider;
+      }
+    } catch (error) {
+      console.log(error);
+    }
   },
   methods: {
     async initializeDapp() {
@@ -59,7 +65,7 @@ export default {
       const val = await this.contract.getFlipperState();
       console.log(val);
     },
-    async flip() {
+    async getSigner() {
       await web3FromAddress(this.selectedAccount.address).then(
         async (injector) => {
           this.signer = new Signer(
@@ -72,10 +78,14 @@ export default {
             abi,
             this.signer
           );
-          const val = await this.contract.flip();
-          console.log(val);
         }
       );
+    },
+    async flip() {
+      this.getSigner();
+      if (this.signer) {
+        await this.contract.flip();
+      }
     },
   },
 };
