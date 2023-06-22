@@ -1,6 +1,8 @@
 <template>
   <div v-if="isWalletConnected && selectedAccount">
     <div>Selected Address {{ selectedAccount.address }}</div>
+    <button @click="getFlipperState">Get flipper value</button>
+    <button @click="flip">Flip</button>
   </div>
   <button v-else @click="initializeDapp">Connect Wallet</button>
 </template>
@@ -12,9 +14,9 @@ import {
   web3Enable,
   web3FromAddress,
 } from "@polkadot/extension-dapp";
-import { WsProvider } from "@polkadot/api";
+// import { network } from "../dapp.config";
 import { Provider, Signer } from "@reef-defi/evm-provider";
-import { network } from "../dapp.config";
+import { WsProvider } from "@polkadot/api";
 import { ethers } from "ethers";
 import { abi } from "./utils/contract/flipper.json";
 import { contractAddress } from "./utils/contract/address";
@@ -30,10 +32,15 @@ export default {
       provider: null,
       signer: null,
       contract: null,
+      arguments: null,
     };
   },
   async created() {
-    await this.initializeDapp();
+    const provider = new Provider({
+      provider: new WsProvider("ws://rpc-testnet.reefscan.info/ws"),
+    });
+    await provider.api.isReady;
+    this.provider = provider;
   },
   methods: {
     async initializeDapp() {
@@ -41,39 +48,34 @@ export default {
       if (this.accounts.length > 0) {
         this.isWalletConnected = true;
         this.selectedAccount = this.accounts[0];
-        this.provider = await this.getProvider();
-        if (this.provider && this.selectedAccount) {
-          await this.getSigner(this.provider);
-        }
       }
     },
     async getReefAccounts() {
       await web3Enable("reef");
       this.accounts = await web3Accounts();
     },
-    async getProvider() {
-      const allInjected = await web3Enable("Reef");
-      if (allInjected.length == 0) {
-        this.error = "Extension not installed";
-        return;
-      }
-      const ReefProvider = new Provider({
-        provider: new WsProvider(network.wsUrlMainnet),
-      });
-      return ReefProvider;
+    async getFlipperState() {
+      this.contract = new ethers.Contract(contractAddress, abi, this.provider);
+      const val = await this.contract.getFlipperState();
+      console.log(val);
     },
-    async getSigner(provider) {
-      provider.api.on("ready", () => {
-        const injector = web3FromAddress(this.selectedAccount.address);
-        this.signer = new Signer(
-          provider,
-          this.selectedAccount.address,
-          injector.signer
-        );
-      });
-    },
-    async getContract() {
-      this.contract = new ethers.Contract(contractAddress, abi, this.signer);
+    async flip() {
+      await web3FromAddress(this.selectedAccount.address).then(
+        async (injector) => {
+          this.signer = new Signer(
+            this.provider,
+            this.selectedAccount.address,
+            injector.signer
+          );
+          this.contract = new ethers.Contract(
+            contractAddress,
+            abi,
+            this.signer
+          );
+          const val = await this.contract.flip();
+          console.log(val);
+        }
+      );
     },
   },
 };
