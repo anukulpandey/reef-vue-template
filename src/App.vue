@@ -80,11 +80,23 @@ export default {
       }
     },
     async getFlipperState() {
-      this.contract = new ethers.Contract(contractAddress, abi, this.provider);
-      const val = await this.contract.getFlipperState();
-      console.log(val);
+      if (this.provider) {
+        this.contract = new ethers.Contract(
+          contractAddress,
+          abi,
+          this.provider
+        );
+        const val = await this.contract.getFlipperState();
+        console.log(val);
+      } else {
+        this.error = "unable to connect to web socket";
+      }
     },
     async getSigner() {
+      if (!this.provider) {
+        this.error = "unable to connect to web socket";
+        return;
+      }
       await web3FromAddress(this.selectedAccount.address).then(
         async (injector) => {
           this.signer = new Signer(
@@ -105,6 +117,8 @@ export default {
         this.getSigner();
         if (this.signer) {
           await this.contract.flip();
+        } else {
+          this.error = "unable to connect to web socket";
         }
       } catch (error) {
         if (error.message == "_canceled") {
