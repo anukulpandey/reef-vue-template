@@ -15,6 +15,9 @@ import {
 import { WsProvider } from "@polkadot/api";
 import { Provider, Signer } from "@reef-defi/evm-provider";
 import { network } from "../dapp.config";
+import { ethers } from "ethers";
+import { abi } from "./utils/contract/flipper.json";
+import { contractAddress } from "./utils/contract/address";
 
 export default {
   name: "App",
@@ -26,6 +29,7 @@ export default {
       error: null,
       provider: null,
       signer: null,
+      contract: null,
     };
   },
   async created() {
@@ -67,6 +71,9 @@ export default {
           injector.signer
         );
       });
+    },
+    async getContract() {
+      this.contract = new ethers.Contract(contractAddress, abi, this.signer);
     },
   },
 };
