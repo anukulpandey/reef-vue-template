@@ -1,8 +1,17 @@
 <template>
   <div v-if="isWalletConnected && selectedAccount">
-    <div>Selected Address {{ selectedAccount }}</div>
-    <button @click="getFlipperState">Get flipper value</button>
-    <button @click="flip">Flip</button>
+    <div>connected as {{ selectedAccount.address }}</div>
+    <br />
+    <div>
+      {{
+        flipperState === null
+          ? "wait few seconds and click on refresh"
+          : flipperState
+      }}
+    </div>
+    <button @click="getFlipperState">refresh</button>
+
+    <button @click="flip">flip state of flipper</button>
   </div>
   <button v-else @click="init">Connect Wallet</button>
   <p>{{ error }}</p>
@@ -34,6 +43,7 @@ export default {
       signer: null,
       contract: null,
       arguments: null,
+      flipperState: null,
     };
   },
   async created() {
@@ -48,7 +58,7 @@ export default {
         this.selectedAccount = this.accounts[0];
         try {
           const provider = new Provider({
-            provider: new WsProvider("wss://rpc-testnet.reefscan.info/ws"),
+            provider: new WsProvider("wss://rpc-testnet.reefscan.com/ws"),
           });
           await provider.api.isReadyOrError;
           provider.api.on("disconnected", () => {
@@ -87,7 +97,8 @@ export default {
           this.provider
         );
         const val = await this.contract.getFlipperState();
-        console.log(val);
+        this.flipperState = val;
+        await this.getSigner();
       } else {
         this.error = "unable to connect to web socket";
       }
@@ -117,9 +128,11 @@ export default {
         this.getSigner();
         if (this.signer) {
           await this.contract.flip();
+          this.error = "tx success : kindly refresh";
         } else {
-          this.error = "unable to connect to web socket";
+          this.error = "unable to connect to web socket, please refresh page";
         }
+        await this.flipperState();
       } catch (error) {
         if (error.message == "_canceled") {
           this.error = "You cancelled the transaction";
