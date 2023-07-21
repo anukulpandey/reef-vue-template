@@ -128,12 +128,12 @@ export default {
         this.getSigner();
         if (this.signer) {
           await this.contract.flip();
-          this.error = "tx success : kindly refresh";
+          this.error = 'tx success : kindly refresh';
         } else {
           this.error = "unable to connect to web socket, please refresh page";
         }
         await this.flipperState();
-      } catch (error) {
+      } catch ( error ) {
         if (error.message == "_canceled") {
           this.error = "You cancelled the transaction";
         }
